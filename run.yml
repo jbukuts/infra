@@ -1,0 +1,10 @@
+---
+- hosts: home
+  become: yes
+
+  roles:
+    - role: system
+    - role: geerlingguy.pip
+    # configure RAID
+    # configure samba
+    # configure docker

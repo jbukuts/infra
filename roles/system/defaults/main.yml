@@ -1,0 +1,10 @@
+---
+username: username
+password: changeme
+
+shell: /bin/bash
+ssh_port: 22
+
+packages:
+  - build-essential
+  - net-tools

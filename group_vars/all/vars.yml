@@ -1,0 +1,16 @@
+---
+username: jbukuts
+
+packages:
+  - vim
+  - htop
+  - neofetch
+  - speedtest-cli
+  - build-essential
+  - net-tools
+
+pip_install_packages:
+  - name: docker
+
+# docker_apt_gpg_key: "https://download.docker.com/linux/ubuntu/gpg"
+# docker_apt_repository: "deb https://download.docker.com/linux/ubuntu jammy stable"
