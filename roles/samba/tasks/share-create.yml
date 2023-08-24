@@ -1,0 +1,29 @@
+---
+
+- name: Create share in configuration file
+  ansible.builtin.blockinfile:
+    path: /etc/samba/smb.conf
+    marker: "# {mark} {{ item.name }} block"
+    state: present
+    block: |
+      [{{ item.name }}]
+        path = {{ item.path }}/{{ item.name }}
+        browsable = yes
+        guest ok = yes
+        read only = no
+        create mask = 0755
+  with_items: "{{ shares }}"
+  when:
+    - item.state | default('present') == 'present'
+
+- name: Create/update share folder permissions
+  ansible.builtin.file:
+    path: "{{ item.path }}/{{ item.name }}"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0777'
+  with_items: "{{ shares }}"
+  notify: "restart share services"
+  when:
+    - item.state | default('present') == 'present'

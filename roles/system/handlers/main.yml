@@ -1,6 +1,7 @@
 ---
+
 # restarts the ssh service only if conf file was change
 - name: Restart SSH daemon
-  service:
+  ansible.builtin.service:
     name: sshd
     state: restarted

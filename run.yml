@@ -1,10 +1,14 @@
 ---
-- hosts: home
-  become: yes
+- name: Set up home server
+  hosts: home
+  become: true
 
   roles:
+    # Prereq
     - role: system
     - role: geerlingguy.pip
     # configure RAID
+    - role: mdadm
     # configure samba
+    - role: samba
     # configure docker

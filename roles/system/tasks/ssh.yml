@@ -1,14 +1,14 @@
 ---
 
 # changes the conf file based on regex
-- name: Update SSH configuration to be more secure (thanks Jeff!)
-  lineinfile:
+- name: Update SSH configuration
+  ansible.builtin.lineinfile:
     dest: "/etc/ssh/sshd_config"
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
     state: present
     validate: 'sshd -T -f %s'
-    mode: 0644
+    mode: "0644"
   with_items:
     - regexp: "^PasswordAuthentication"
       line: "PasswordAuthentication no"
@@ -27,8 +27,3 @@
     - regexp: "^X11Forwarding"
       line: "X11Forwarding no"
   notify: Restart SSH daemon
-
-
-# dont wait for end of playbook to exec handler
-# - meta: flush_handlers
-

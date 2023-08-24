@@ -1,0 +1,21 @@
+---
+
+- name: Nuke share directory
+  ansible.builtin.file:
+    path: "{{ item.path }}/{{ item.name }}"
+    state: absent
+  with_items: "{{ shares }}"
+  when:
+    - item.state is defined
+    - item.state | lower == 'absent'
+
+- name: Remove share in configuration file
+  ansible.builtin.blockinfile:
+    path: /etc/samba/smb.conf
+    marker: "# {mark} {{ item.name }} block"
+    state: absent
+  with_items: "{{ shares }}"
+  notify: "restart share services"
+  when:
+    - item.state is defined
+    - item.state | lower == 'absent'

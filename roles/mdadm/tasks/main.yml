@@ -1,0 +1,11 @@
+---
+
+# Software RAID configuration
+- name: RAID set-up via mdadm
+  block:
+    - name: Install mdadm
+      ansible.builtin.include_tasks: install.yml
+    - name: Destroy arrays
+      ansible.builtin.include_tasks: array-nuke.yml
+    - name: Create arrays
+      ansible.builtin.include_tasks: array-create.yml

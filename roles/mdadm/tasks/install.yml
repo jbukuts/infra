@@ -1,0 +1,6 @@
+---
+
+- name: Install mdadm (Ubuntu)
+  ansible.builtin.package:
+    name: mdadm
+    state: present

@@ -1,0 +1,35 @@
+---
+
+# handlers for array creation
+- name: Update initramfs
+  ansible.builtin.command: update-initramfs -u -v
+  register: "update_initramfs"
+  changed_when: update_initramfs.rc == 0
+  failed_when: update_initramfs.rc != 0
+  listen: "Update initramfs"
+
+- name: Capturing Array Details
+  ansible.builtin.command: "mdadm --detail --scan"
+  register: "array_details"
+  changed_when: false
+  failed_when: array_details.rc != 0
+  listen: "create | update RAID configuration"
+
+- name: Updating /etc/mdadm/mdadm.conf
+  ansible.builtin.lineinfile:
+    dest: "/etc/mdadm/mdadm.conf"
+    regexp: "^{{ item }}"
+    line: "{{ item }}"
+    state: "present"
+  with_items: '{{ array_details.stdout_lines }}'
+  listen: "create | update RAID configuration"
+
+# handlers for array nuking
+- name: Updating mdadm to remove array
+  ansible.builtin.lineinfile:
+    dest: "/etc/mdadm/mdadm.conf"
+    regexp: "^ARRAY /dev/{{ item.name }}"
+    line: "ARRAY /dev/{{ item.name }}"
+    state: "absent"
+  with_items: "{{ arrays }}"
+  listen: "nuke | update RAID configuration"

@@ -1,0 +1,80 @@
+---
+
+# determine existing arrays
+- name: Checking status of arrays
+  ansible.builtin.shell: |
+    set -o pipefail
+    cat /proc/mdstat | grep "{{ item.name }}"
+  args:
+    executable: /bin/bash
+  register: "array_check"
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  with_items: '{{ arrays }}'
+
+- name: DEBUG | See array status
+  ansible.builtin.debug:
+    var: array_check
+
+# create new arrays when not already existing
+- name: Create arrays
+  ansible.builtin.command:
+    cmd: >-
+      mdadm --create /dev/{{ item.name }}
+      --level={{ item.level }}
+      --metadata={{ item.raid_metadata_version | default(1.2) }}
+      --raid-devices={{ item.devices | count }}
+      {{ item.devices | join(' ') }}
+    stdin: "yes"
+  register: "array_created"
+  with_items: "{{ arrays }}"
+  changed_when: array_created.rc == 0
+  failed_when: array_created.rc != 0
+  when:
+    - item.state | lower == "present"
+    - array_check.results[0].rc != 0
+
+- name: DEBUG | See created arrays
+  ansible.builtin.debug:
+    var: array_created
+
+# create filesystem for arrays
+- name: Create filesystems
+  community.general.filesystem:
+    fstype: "{{ item.filesystem }}"
+    opts: "-F"
+    dev: "/dev/{{ item.name }}"
+  with_items: '{{ arrays }}'
+  when:
+    - item.state | lower == "present"
+
+# mount arrays
+- name: Mount arrays
+  ansible.posix.mount:
+    name: "/mnt/{{ item.name }}"
+    src: "/dev/{{ item.name }}"
+    fstype: "{{ item.filesystem }}"
+    state: "mounted"
+  with_items: '{{ arrays }}'
+  when:
+    - item.state | lower == "present"
+
+# create folders in the mnt directory for file systems
+- name: Update mount point permissions
+  ansible.builtin.file:
+    path: "/mnt/{{ item.name }}"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0777'
+  with_items: "{{ arrays }}"
+  changed_when: array_created.changed
+  notify:
+    - "create | update RAID configuration"
+    - "Update initramfs"
+  when:
+    - item.state | lower == "present"
+
+# run handler now
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

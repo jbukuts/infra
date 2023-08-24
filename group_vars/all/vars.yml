@@ -1,6 +1,7 @@
 ---
-username: jbukuts
 
+# system role vars
+username: jbukuts
 packages:
   - vim
   - htop
@@ -9,6 +10,23 @@ packages:
   - build-essential
   - net-tools
 
+# mdadm role vars
+arrays:
+  - name: md0
+    state: present
+    filesystem: ext4
+    level: 1
+    devices:
+      - '/dev/sda'
+      - '/dev/sdb'
+
+# samba role vars
+shares:
+  - name: "safe_share"
+    state: present
+    path: '/mnt/md0'
+
+# geerlingguy role vars
 pip_install_packages:
   - name: docker
 

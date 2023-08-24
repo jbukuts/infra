@@ -1,5 +1,11 @@
 ---
-# aggregate tasks
-- include_tasks: essential.yml
-- include_tasks: ssh.yml
-- include_tasks: user.yml
+
+# aggregate system tasks
+- name: Essential system set-up
+  block:
+    - name: Essential set-up
+      ansible.builtin.include_tasks: essential.yml
+    - name: SSH configuration
+      ansible.builtin.include_tasks: ssh.yml
+    - name: User configuration
+      ansible.builtin.include_tasks: user.yml

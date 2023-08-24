@@ -1,0 +1,11 @@
+---
+
+# aggregate samba tasks
+- name: Samba set-up
+  block:
+    - name: Install samba
+      ansible.builtin.include_tasks: install.yml
+    - name: Create shares
+      ansible.builtin.include_tasks: share-create.yml
+    - name: Remove shares
+      ansible.builtin.include_tasks: share-destroy.yml

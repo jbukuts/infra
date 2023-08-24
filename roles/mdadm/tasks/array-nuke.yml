@@ -1,0 +1,41 @@
+---
+
+# umount equivalent
+- name: Unmount all points and arrays
+  ansible.posix.mount:
+    name: "{{ item }}"
+    state: "unmounted"
+  with_items: "{{ ['/mnt/', '/dev/'] | product(arrays | selectattr('state', 'eq', 'absent') | map(attribute='name')) | map('join', '') }}"
+
+# redundant to remove from fstab
+- name: Remove from fstab all points and arrays
+  ansible.posix.mount:
+    name: "{{ item }}"
+    state: "absent"
+  with_items: "{{ ['/mnt/', '/dev/'] | product(arrays | selectattr('state', 'eq', 'absent') | map(attribute='name')) | map('join', '') }}"
+
+# stop the arrays
+- name: Stop arrays
+  ansible.builtin.command: "mdadm --stop /dev/{{ item.name }}"
+  register: "remove_arrays"
+  changed_when: remove_arrays.rc == 0
+  failed_when: remove_arrays.rc != 0 and "No such file or directory" not in remove_arrays.stderr
+  with_items: "{{ arrays }}"
+  when:
+    - item.state | default('present') | lower == "absent"
+
+# remove data from superblocks
+- name: Zero drive superblocks
+  ansible.builtin.command: "mdadm --zero-superblock {{ item }}"
+  register: "zeroed_blocks"
+  with_items: "{{ arrays | selectattr('state', 'equalto', 'absent') | map(attribute='devices') | flatten }}"
+  changed_when: zeroed_blocks.rc == 0 and "Unrecognised md component device" not in zeroed_blocks.stderr
+  failed_when: zeroed_blocks.rc != 0
+  notify:
+    - "nuke | update RAID configuration"
+    - "Update initramfs"
+
+# debug variable
+- name: Debug drive superblocks
+  ansible.builtin.debug:
+    var: zeroed_blocks
