@@ -1,0 +1,11 @@
+---
+
+# Software RAID configuration
+- name: RAID set-up via zfs
+  block:
+    - name: Install zfs
+      ansible.builtin.include_tasks: install.yml
+    - name: Destroy pool(s)
+      ansible.builtin.include_tasks: pool-destroy.yml
+    - name: Create pool(s)
+      ansible.builtin.include_tasks: pool-create.yml

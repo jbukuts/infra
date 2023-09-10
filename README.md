@@ -12,7 +12,15 @@ RAM: 128 GB 2400Mhz DDR4 ECC
 OS: 22.04 Ubuntu Home
 ```
 
+
 ## Steps
+
+First start by install any required roles or collections via:
+
+```sh
+ansible-galaxy install -r requirements.yml
+```
+
 
 A quick overview of the steps taken to initialize my home server is this
 
@@ -22,6 +30,8 @@ A quick overview of the steps taken to initialize my home server is this
        - Copy key file
     - Passwordless sudo for my user
 2. Building RAID arrays
+    - I've written two roles for this. One using `zfs` and the other `mdadm`. 
+
     - The arrays aren't too complicated and are built via `mdadm`. No fancy caching or additional parity. 
     - They can be specified via some variables as to which drives are in what arrays, their mount points, and RAID level.
        - more in depth explanation [here]()
@@ -29,6 +39,7 @@ A quick overview of the steps taken to initialize my home server is this
 3. Install and configure Docker containers
     - The installation itself is handled via [geerlingguy's role]()
     - The containers I provision are:
+        - Portainer Community Edition
         - Plex
         - PiHole
         - Transmission

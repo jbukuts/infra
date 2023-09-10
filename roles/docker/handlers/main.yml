@@ -1,0 +1,12 @@
+---
+
+- name: Change symlink for resolv.conf
+  ansible.builtin.command: ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+  register: "update_symlink"
+  changed_when: update_symlink.rc == 0
+  failed_when: update_symlink.rc != 0
+
+- name: Restart systemd-resolved daemon
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: restarted

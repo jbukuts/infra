@@ -10,3 +10,7 @@
     name: "{{ packages }}"
     state: present
     use: "auto"
+
+- name: Set a hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"

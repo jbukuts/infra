@@ -1,0 +1,9 @@
+---
+
+# aggregate docker tasks
+- name: Samba set-up
+  block:
+    - name: Create containers
+      ansible.builtin.include_tasks: containers.yml
+    - name: Cleanup docker items
+      ansible.builtin.include_tasks: cleanup.yml

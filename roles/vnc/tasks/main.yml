@@ -1,0 +1,7 @@
+---
+
+# aggregate VNC tasks
+- name: VNC server set-up
+  block:
+    - name: Install
+      ansible.builtin.include_tasks: install.yml

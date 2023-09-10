@@ -1,0 +1,24 @@
+---
+
+# follow https://www.cyberithub.com/how-to-install-xrdp-on-ubuntu-22-04-lts-jammy-jellyfish/
+- name: Add user to xrdp group "[{{ username }}]"
+  ansible.builtin.user:
+    append: true
+    name: "{{ username }}"
+    state: present
+    groups:
+      - 'xrdp'
+      - 'ssl-cert'
+  notify: 'Restart xrdp service'
+
+# from https://askubuntu.com/questions/1404245/remote-desktop-from-windows-onto-ubuntu-22-04-takes-me-to-a-xrdp-login-then-a-bl
+- name: Add vars to xrdp script
+  ansible.builtin.blockinfile:
+    path: /etc/xrdp/startwm.sh
+    insertafter: '#!/bin/sh'
+    marker: "# {mark} xrdp"
+    state: present
+    block: |
+      export GNOME_SHELL_SESSION_MODE=ubuntu
+      export XDG_CURRENT_DESKTOP=ubuntu:GNOME
+  notify: 'Restart xrdp service'

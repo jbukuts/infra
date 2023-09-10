@@ -1,0 +1,197 @@
+---
+
+- name: Create docker volume(s)
+  community.docker.docker_volume:
+    state: present
+    volume_name: "{{ item }}"
+  with_items:
+    - "portainer_data"
+    - "etc-pihole"
+    - "etc-dnsmasq.d"
+    - "grafana_storage"
+    - "prometheus_data"
+    - "netdataconfig"
+    - "netdatalib"
+    - "netdatacache"
+    - "ha_storage"
+    - "plex_storage"
+
+# following docs (https://docs.portainer.io/start/install/server/docker/linux)
+- name: Create portainer container
+  community.docker.docker_container:
+    name: portainer
+    image: portainer/portainer-ce:latest
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    privileged: true
+    restart_policy: always
+    ports:
+      - "8000:8000"
+      - "9443:9443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+
+# special steps for Ubuntu (https://github.com/pi-hole/docker-pi-hole#installing-on-ubuntu-or-fedora)
+- name: Update system-resolved configuration
+  ansible.builtin.lineinfile:
+    dest: "/etc/systemd/resolved.conf"
+    regexp: "^#DNSStubListener="
+    line: "DNSStubListener=no"
+    state: "present"
+
+- name: Remove resolv.conf file
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  notify:
+    - Change symlink for resolv.conf
+    - Restart systemd-resolved daemon
+
+# following docs (https://hub.docker.com/r/pihole/pihole)
+- name: Create pihole container
+  community.docker.docker_container:
+    name: pihole
+    image: pihole/pihole:latest
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    restart_policy: unless-stopped
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "80:80/tcp"
+    volumes:
+      - 'etc-pihole:/etc/pihole'
+      - 'etc-dnsmasq.d:/etc/dnsmasq.d'
+
+# following docs (https://hub.docker.com/_/influxdb)
+# - name: Create influxdb container
+#   community.docker.docker_container:
+#     name: influxdb
+#     image: influxdb:latest
+#     state: started
+#     restart: true
+#     env:
+#       DOCKER_INFLUXDB_INIT_MODE: "setup"
+#       DOCKER_INFLUXDB_INIT_USERNAME: "{{ username }}"
+#       DOCKER_INFLUXDB_INIT_PASSWORD: "password"
+#       DOCKER_INFLUXDB_INIT_ORG: "me"
+#       DOCKER_INFLUXDB_INIT_BUCKET: "my_bucket"
+#     ports:
+#       - "8086:8086"
+#     volumes:
+#       - 'influx_data:/var/lib/influxdb2'
+
+# following docs (https://learn.netdata.cloud/docs/installing/docker)
+- name: Create netdata container
+  community.docker.docker_container:
+    name: netdata
+    image: netdata/netdata:latest
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    restart_policy: unless-stopped
+    pid_mode: "host"
+    security_opts:
+      - apparmor:unconfined
+    capabilities:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    networks:
+      - name: "host"
+    volumes:
+      - 'netdataconfig:/etc/netdata'
+      - 'netdatalib:/var/lib/netdata'
+      - 'netdatacache:/var/cache/netdata'
+      - '/etc/passwd:/host/etc/passwd:ro'
+      - '/etc/group:/host/etc/group:ro'
+      - '/proc:/host/proc:ro'
+      - '/sys:/host/sys:ro'
+      - '/etc/os-release:/host/etc/os-release:ro'
+      - '/var/run/docker.sock:/var/run/docker.sock:ro'
+
+# following docs (https://hub.docker.com/r/prom/prometheus)
+- name: Create prometheus container
+  community.docker.docker_container:
+    name: prometheus
+    image: prom/prometheus:latest
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    ports:
+      - "9090:9090"
+    volumes:
+      - 'prometheus_data:/etc/prometheus'
+
+# following docs (https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/)
+- name: Create grafana container
+  community.docker.docker_container:
+    name: grafana
+    image: grafana/grafana-enterprise:latest
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    env:
+      GF_INSTALL_PLUGINS: "grafana-clock-panel, grafana-simple-json-datasource"
+    ports:
+      - "3000:3000/tcp"
+    volumes:
+      - 'grafana_storage:/var/lib/grafana'
+
+# following docs (https://www.home-assistant.io/installation/linux#platform-installation)
+- name: Create home assistant container
+  community.docker.docker_container:
+    name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    restart_policy: unless-stopped
+    privileged: true
+    networks:
+      - name: "host"
+    env:
+      TZ: "America/New_York"
+    volumes:
+      - 'ha_storage:/config'
+
+# following docs (https://hub.docker.com/r/linuxserver/plex)
+- name: Create plex container
+  community.docker.docker_container:
+    name: plex
+    image: lscr.io/linuxserver/plex:latest
+    state: started
+    restart: "{{ force_docker_containers_restart }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: 'host'
+    env:
+      PUID: '1000'
+      PGID: '1000'
+      TZ: 'America/New_York'
+      VERSION: docker
+    volumes:
+      - 'plex_storage:/config'
+
+# following docs (https://github.com/haugene/docker-transmission-openvpn#docker-run)
+# - name: Create transmission openvpn container
+#   community.docker.docker_container:
+#     name: transmission
+#     image: haugene/transmission-openvpn
+#     state: started
+#     restart: "{{ force_docker_containers_restart }}"
+#     log_driver: json-file
+#     security_opts:
+#       - 'seccomp:unconfined' # https://github.com/haugene/docker-transmission-openvpn/issues/2410
+#     log_opt:
+#       - max-size=10m
+#     capabilities:
+#       - NET_ADMIN
+#     env:
+#       # secrets? automate pull from VPN instance?
+#       OPENVPN_PROVIDER: PIA
+#       OPENVPN_CONFIG: france
+#       OPENVPN_USERNAME: user
+#       OPENVPN_PASSWORD: pass
+#       LOCAL_NETWORK: 192.168.0.0/16
+#     ports:
+#       - '9091:9091'
+#     volumes:
+#       - 'ha_storage:/config'

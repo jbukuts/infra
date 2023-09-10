@@ -2,6 +2,7 @@
 
 # system role vars
 username: jbukuts
+hostname: jakes-server
 packages:
   - vim
   - htop
@@ -9,16 +10,33 @@ packages:
   - speedtest-cli
   - build-essential
   - net-tools
+  - smartmontools
+
+# setup for pulling .ovpn files to server
+ovpn_file_name: 'dropbucket-india.ovpn'
+ovpn_remote_path: '/home/dropbucket/{{ ovpn_file_name }}'
+ovpn_dest_path: '/home/{{ username }}/vpn_files/'
+
+force_docker_containers_restart: false
 
 # mdadm role vars
-arrays:
+# arrays:
+#   - name: md0
+#     state: absent
+#     filesystem: ext4
+#     level: 1
+#     devices:
+#       - '/dev/sda'
+#       - '/dev/sdb'
+
+# zfs role vars
+pools:
   - name: md0
     state: present
-    filesystem: ext4
-    level: 1
+    level: mirror
     devices:
-      - '/dev/sda'
-      - '/dev/sdb'
+      - '/dev/disk/by-id/ata-WL3000GSA6472E_WD-WMC130D0KPVL'
+      - '/dev/disk/by-id/ata-WL3000GSA6472E_WD-WMC130E02HUT'
 
 # samba role vars
 shares:
@@ -27,6 +45,9 @@ shares:
     path: '/mnt/md0'
 
 # geerlingguy role vars
+docker_users:
+  - "{{ username }}"
+
 pip_install_packages:
   - name: docker
 

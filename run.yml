@@ -1,7 +1,24 @@
 ---
+
 - name: Set up home server
   hosts: home
   become: true
+
+  pre_tasks:
+    # pull to control node and push from control node
+    # simpler than adding ssh perms for sync module imo
+    - name: Pull .ovpn file from remote
+      ansible.builtin.fetch:
+        src: '{{ ovpn_remote_path }}'
+        dest: '/tmp/'
+      delegate_to: "jakes-india-vpn"
+    - name: Push .ovpn file to home server
+      ansible.builtin.copy:
+        src: '/tmp/{{ ansible_hostname }}{{ (ovpn_remote_path | split("/") | map("trim"))[:-1] | join("/") }}/'
+        dest: '{{ ovpn_dest_path }}'
+        group: "{{ username }}"
+        owner: "{{ username }}"
+        mode: '644'
 
   roles:
     # Prereq
@@ -9,6 +26,14 @@
     - role: geerlingguy.pip
     # configure RAID
     - role: mdadm
+      when: arrays is defined
+    # configure zfs
+    - role: zfs
+      when: pools is defined
     # configure samba
     - role: samba
+    # configure remote login
+    - role: vnc
     # configure docker
+    # - role: geerlingguy.docker
+    # - role: docker

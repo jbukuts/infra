@@ -1,0 +1,57 @@
+---
+
+# determine existing arrays
+- name: Checking status of pool(s)
+  ansible.builtin.shell: |
+    set -o pipefail
+    zpool status | grep "{{ item.name }}"
+  args:
+    executable: /bin/bash
+  register: "pool_check"
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  with_items: '{{ pools }}'
+
+- name: DEBUG | Pool(s) status
+  ansible.builtin.debug:
+    var: pool_check
+
+# attempt to import pool by name
+- name: Import pool(s)
+  ansible.builtin.command:
+    cmd: zpool import {{ item.conf.name }}
+  register: "pool_imported"
+  with_items: "{{ pool_check.results | json_query('[].{ conf: item, rc: rc }') }}"
+  changed_when: pool_imported.rc == 0
+  failed_when: pool_imported.rc != 0
+  when:
+    - item.conf.state is defined
+    - item.conf.state | lower == "import"
+    - item.rc != 0
+
+# create a new pools
+- name: Create pool(s)
+  ansible.builtin.command:
+    cmd: >-
+      zpool create
+      -m /mnt/{{ item.conf.name }}
+      {{ item.conf.name }}
+      {{ item.conf.level }}
+      {{ item.conf.devices | join(' ') }}
+  register: "pool_created"
+  with_items: "{{ pool_check.results | json_query('[].{ conf: item, rc: rc }') }}"
+  changed_when: pool_created.rc == 0
+  failed_when: pool_created.rc != 0
+  when:
+    - item.conf.state | default('present') | lower == "present"
+    - item.rc != 0
+
+- name: REGISTER | Current pool(s)
+  ansible.builtin.command: zpool status
+  register: "pools_created"
+  changed_when: false
+
+- name: DEBUG | Current pool(s)
+  ansible.builtin.debug:
+    var: pools_created

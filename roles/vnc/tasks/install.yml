@@ -1,0 +1,6 @@
+---
+
+- name: Install xrdp (Ubuntu)
+  ansible.builtin.package:
+    name: xrdp
+    state: present

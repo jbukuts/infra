@@ -1,0 +1,20 @@
+---
+
+- name: Destroy pool(s)
+  ansible.builtin.command: zpool destroy {{ item.name }}
+  register: "pool_destroyed"
+  with_items: "{{ pools }}"
+  changed_when: pool_destroyed.rc == 0
+  failed_when: pool_destroyed.rc != 0 and "no such pool" not in pool_destroyed.stderr
+  when:
+    - item.state is defined
+    - item.state | lower == "absent"
+
+- name: REGISTER | Current pool(s)
+  ansible.builtin.command: zpool status
+  register: "pools_status"
+  changed_when: false
+
+- name: DEBUG | Current pool(s)
+  ansible.builtin.debug:
+    var: pools_status
